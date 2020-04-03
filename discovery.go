@@ -227,10 +227,19 @@ func (d *discovery) getServiceAddressesA(ctx context.Context, u *url.URL) (Servi
 	now := time.Now()
 	addrs := make(ServiceAddresses, len(resp.Answer))
 	for i, record := range resp.Answer {
+		var portNum uint16
+		if u.Port() != "" {
+			portNumTmp, err := strconv.ParseUint(u.Port(), 10, 16)
+			if err != nil {
+				panic(err)
+			}
+			portNum = uint16(portNumTmp)
+		}
 		if t, ok := record.(*dns.A); ok {
 			addrs[i] = ServiceAddress{
 				Name:      t.A.String(),
 				IP:        t.A,
+				Port:	   portNum,
 				expiresAt: now.Add(time.Second * time.Duration(record.Header().Ttl)),
 			}
 		} else {
