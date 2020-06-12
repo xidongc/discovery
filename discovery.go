@@ -12,7 +12,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
-	"github.com/wish/discovery/resolver"
+	"github.com/xidongc/discovery/resolver"
 )
 
 // NewDiscoveryFromEnv is a convenience method for creating a client from environment config
@@ -42,6 +42,7 @@ type discovery struct {
 func (d *discovery) GetServiceAddresses(ctx context.Context, query string) (ServiceAddresses, error) {
 	// Unfortunately there isn't a good mechanism to parse just the host/port section (which is the query we are expecting)
 	// so we are going to add it and get a result
+
 	u, err := url.Parse("notreal://" + query)
 	if err != nil {
 		return nil, err
@@ -63,6 +64,29 @@ func (d *discovery) GetServiceAddresses(ctx context.Context, query string) (Serv
 				IP:       ip,
 				Port:     portNum,
 				isStatic: true,
+			},
+		}, nil
+	}
+	if strings.HasSuffix(u.Hostname(), ".svc.cluster.local") {
+
+		addrs, err := net.LookupIP(u.Hostname())
+		var defaultMongoPort uint16 = 27017
+
+		if err != nil {
+			return nil, err
+		}
+		if len(addrs) == 0 {
+			return nil, errors.New("no ip found")
+		}
+		ip := addrs[0]
+		fmt.Println(ip)
+
+		return ServiceAddresses{
+			ServiceAddress{
+				Name:     u.Hostname() + ":27017",
+				IP:       ip,
+				Port:     defaultMongoPort,
+				isStatic: false,
 			},
 		}, nil
 	}
